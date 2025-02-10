@@ -317,16 +317,18 @@
                 const offsetSeconds = getOffsetSeconds(data, currentDate);
                 const localOffsetHours = (offsetSeconds - japanOffsetSeconds) / 3600;
                 const localHour = (japanHour + localOffsetHours + 24) % 24;
-
+    
                 if (localHour >= startHourCall && localHour < endHourCall) {
-                    // Exclude United States and Canada
-                    if (location.country !== 'United States' && location.country !== 'Canada') {
+                    // Exclude United States, Canada, and Australia
+                    if (location.country !== 'United States' && 
+                        location.country !== 'Canada' && 
+                        location.country !== 'Australia') {
                         // Avoid duplicates
                         if (!countryCodes.includes(location.country_code)) {
                             countryCodes.push(location.country_code);
                             countryNames.push(location.country);
                         }
-                    }
+                        }
                 }
             });
         });
