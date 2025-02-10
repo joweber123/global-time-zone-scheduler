@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Hours Alignment</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .control-group {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        label {
+            font-weight: bold;
+            margin-top: 10px;
+            display: block;
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .copy-buttons button{
+            margin-right: 5px;
+            width: 170px;
+        }
+        #timeBlocks {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); /* Two columns on larger screens */
+    gap: 20px; /* Space between blocks */
+}
+
+@media (max-width: 768px) {
+    #timeBlocks {
+        grid-template-columns: 1fr; /* Stack items on smaller screens */
+    }
+}
+
+.time-block {
+    border: 1px solid #ccc;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+        .time-block {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-top: 10px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        .japan-time {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+ 
+        }
+        .location-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .location-name {
+            font-weight: 500;
+        }
+        .region-tag {
+            font-size: 0.8em;
+            color: #666;
+            margin-left: 8px;
+        }
+        .dst {
+            color: #e74c3c;
+        }
+        .dst-indicator {
+    font-size: 0.8em;
+    color: #e74c3c;
+    margin-left: 8px;
+    display: inline-block;
+}
+        #currentDate {
+            text-align: center;
+            font-size: 1.2em;
+            margin: 20px 0;
+            color: #333;
+        }
+
+        .location-type-tag {
+            font-size: 0.7em;
+            color: #666;
+            margin-left: 5px;
+            text-transform: uppercase;
+        }
+        .location-type-state { color: #3498db; }
+        .location-type-province { color: #2ecc71; }
+        .location-type-territory { color: #e74c3c; }
+        .monday-checkbox-container {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+
+        }
+        .monday-checkbox-container label {
+            margin: 0 0 0 5px;
+            font-weight: normal;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Global Time Zone Scheduler</h2>
+
+    <div class="controls">
+        <div class="control-group">
+            <h3>Japan Business Hours</h3>
+            <label for="startHourJP">Start Time:</label>
+            <select id="startHourJP"></select>
+            <label for="endHourJP">End Time:</label>
+            <select id="endHourJP"></select>
+            <div class="monday-checkbox-container">
+                <input type="checkbox" id="mondayCheckbox">
+                <label for="mondayCheckbox">Monday?</label>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <h3>Local Business Hours</h3>
+            <label for="startHourCall">Start Time:</label>
+            <select id="startHourCall"></select>
+            <label for="endHourCall">End Time:</label>
+            <select id="endHourCall"></select>
+        </div>
+    </div>
+
+    <button onclick="updateTimes()">Refresh Times</button>
+
+    <h3 id="currentDate"></h3>
+    <div id="timeBlocks"></div>
+</div>
+
+<script>
+    let timezoneData = {};
+
+    async function loadTimezoneData() {
+        try {
+            const response = await fetch('combined_timezone_data.json');
+            timezoneData = await response.json();
+            updateTimes();
+        } catch (error) {
+            console.error('Error loading timezone data:', error);
+        }
+    }
+
+    function populateHourDropdowns() {
+        const hours = [...Array(24).keys()];
+        const selects = ['startHourJP', 'endHourJP', 'startHourCall', 'endHourCall'];
+        
+        selects.forEach(id => {
+            const select = document.getElementById(id);
+            select.innerHTML = '';
+            hours.forEach(hour => {
+                let option = document.createElement('option');
+                option.value = hour;
+                option.textContent = `${hour.toString().padStart(2, '0')}:00`;
+                select.appendChild(option);
+            });
+        });
+
+        document.getElementById('startHourJP').value = localStorage.getItem('startHourJP') || 9;
+        document.getElementById('endHourJP').value = localStorage.getItem('endHourJP') || 17;
+        document.getElementById('startHourCall').value = localStorage.getItem('startHourCall') || 9;
+        document.getElementById('endHourCall').value = localStorage.getItem('endHourCall') || 17;
+    }
+
+    function saveHoursToLocalStorage() {
+        localStorage.setItem('startHourJP', document.getElementById('startHourJP').value);
+        localStorage.setItem('endHourJP', document.getElementById('endHourJP').value);
+        localStorage.setItem('startHourCall', document.getElementById('startHourCall').value);
+        localStorage.setItem('endHourCall', document.getElementById('endHourCall').value);
+    }
+
+    function isDST(timezone, currentDate) {
+        const tzData = timezone.timezone_data;
+        if (!tzData.has_dst) return false;
+        const dstStart = new Date(tzData.dst_start);
+        const dstEnd = new Date(tzData.dst_end);
+        return currentDate >= dstStart && currentDate <= dstEnd;
+    }
+
+    function getOffsetSeconds(timezone, currentDate) {
+        const tzData = timezone.timezone_data;
+        return isDST(timezone, currentDate) ? tzData.dst_offset_seconds : tzData.standard_offset_seconds;
+    }
+
+
+    function createTimeBlock(japanHour, currentDate) {
+            const timeBlock = document.createElement('div');
+            timeBlock.className = 'time-block';
+
+            const japanTime = document.createElement('div');
+            japanTime.className = 'japan-time';
+
+            const japanTimeText = document.createElement('span');
+            japanTimeText.textContent = `${japanHour.toString().padStart(2, '0')}:00 JST`;
+
+            const copyButtons = document.createElement('div');
+            copyButtons.className = 'copy-buttons';
+
+            const copyStateProvinceBtn = document.createElement('button');
+            copyStateProvinceBtn.className = 'copy-btn copy-state-province';
+            copyStateProvinceBtn.textContent = 'Copy State/Province';
+
+            const copyCountryBtn = document.createElement('button');
+            copyCountryBtn.className = 'copy-btn copy-country';
+            copyCountryBtn.textContent = 'Copy Country';
+
+            copyButtons.appendChild(copyStateProvinceBtn);
+            copyButtons.appendChild(copyCountryBtn);
+
+            japanTime.appendChild(japanTimeText);
+            japanTime.appendChild(copyButtons);
+
+            const locationList = document.createElement('div');
+            locationList.className = 'location-list';
+
+            const japanOffsetSeconds = 32400;
+            const startHourCall = parseInt(document.getElementById('startHourCall').value);
+            const endHourCall = parseInt(document.getElementById('endHourCall').value);
+
+            // Collect all locations with their calculated times
+            let locationsWithTimes = [];
+            let stateProvinceCodes = [];
+            let stateProvinceNames = [];
+
+            Object.entries(timezoneData).forEach(([tz, data]) => {
+                data.locations.forEach(location => {
+                    const offsetSeconds = getOffsetSeconds(data, currentDate);
+                    const localOffsetHours = (offsetSeconds - japanOffsetSeconds) / 3600;
+                    const localHour = (japanHour + localOffsetHours + 24) % 24;
+
+                    // Add condition to exclude US and Canada if Monday checkbox is checked
+                    const isMondayChecked = document.getElementById('mondayCheckbox').checked;
+                    if (isMondayChecked && 
+                        (location.country === 'United States' || location.country === 'Canada')) {
+                        return; // Skip these locations
+                    }
+
+                    if (localHour >= startHourCall && localHour < endHourCall) {
+                        locationsWithTimes.push({
+                            location: location,
+                            localHour: localHour,
+                            data: data,
+                            isDST: isDST(data, currentDate)
+                        });
+
+                        // Collect state/province codes and names
+                        if (location.location_type === 'state' && location.state_code) {
+                            stateProvinceCodes.push(location.state_code);
+                            stateProvinceNames.push(location.state);
+                        } else if (location.location_type === 'province' && location.province_code) {
+                            stateProvinceCodes.push(location.province_code);
+                            stateProvinceNames.push(location.province);
+                        }
+                    }
+                });
+            });
+
+    // Add copy event listener for State/Province button
+    copyStateProvinceBtn.addEventListener('click', () => {
+        const combinedList = [...stateProvinceCodes, ...stateProvinceNames].join(';');
+        navigator.clipboard.writeText(combinedList).then(() => {
+            copyStateProvinceBtn.textContent = 'Copied!';
+            setTimeout(() => {
+                copyStateProvinceBtn.textContent = 'Copy State/Province';
+            }, 2000);
+        });
+    });
+
+    copyCountryBtn.addEventListener('click', () => {
+        const countryCodes = [];
+        const countryNames = [];
+
+        Object.entries(timezoneData).forEach(([tz, data]) => {
+            data.locations.forEach(location => {
+                const offsetSeconds = getOffsetSeconds(data, currentDate);
+                const localOffsetHours = (offsetSeconds - japanOffsetSeconds) / 3600;
+                const localHour = (japanHour + localOffsetHours + 24) % 24;
+
+                if (localHour >= startHourCall && localHour < endHourCall) {
+                    // Exclude United States and Canada
+                    if (location.country !== 'United States' && location.country !== 'Canada') {
+                        // Avoid duplicates
+                        if (!countryCodes.includes(location.country_code)) {
+                            countryCodes.push(location.country_code);
+                            countryNames.push(location.country);
+                        }
+                    }
+                }
+            });
+        });
+
+        const combinedList = [...countryCodes, ...countryNames].join(';');
+        navigator.clipboard.writeText(combinedList).then(() => {
+            copyCountryBtn.textContent = 'Copied!';
+            setTimeout(() => {
+                copyCountryBtn.textContent = 'Copy Country';
+            }, 2000);
+        });
+    });
+
+    // Sort by local hour first, then alphabetically by location name
+    locationsWithTimes.sort((a, b) => {
+        if (a.localHour !== b.localHour) {
+            return a.localHour - b.localHour;
+        }
+        
+        // Get the location name, with fallback
+        const getLocationName = (location) => {
+            return location.state || location.province || location.country || 'Unknown';
+        };
+        
+        return getLocationName(a.location).localeCompare(getLocationName(b.location));
+    });
+
+    // Create DOM elements for sorted locations
+    locationsWithTimes.forEach(item => {
+        // Determine the specific location name based on location type
+        const specificLocationName = 
+            item.location.state || 
+            item.location.province ||
+            item.location.country;
+        
+        // Ensure we always have a name to display
+        if (!specificLocationName) {
+            console.warn('Location without a name:', item.location);
+            return;
+        }
+
+        const locationItem = document.createElement('div');
+        locationItem.className = 'location-item';
+
+        const locationName = document.createElement('div');
+        locationName.className = 'location-name';
+        
+        // Display location name with country
+        locationName.innerHTML = `${specificLocationName} ${item.location.country && specificLocationName !== item.location.country ? `(${item.location.country})` : ''}`;
+        
+        // Add location type tag
+        if (item.location.location_type && item.location.location_type !== 'country') {
+            const typeTag = document.createElement('span');
+            typeTag.className = `location-type-tag location-type-${item.location.location_type}`;
+            typeTag.textContent = item.location.location_type;
+            locationName.appendChild(typeTag);
+        }
+        
+        // Add DST indicator if applicable
+        if (item.isDST) {
+            const dstIndicator = document.createElement('span');
+            dstIndicator.className = 'dst-indicator';
+            dstIndicator.textContent = `DST Active (${item.data.timezone_data.dst_name})`;
+            locationName.appendChild(dstIndicator);
+        }
+
+        const localTime = document.createElement('div');
+        localTime.className = 'local-time';
+        localTime.textContent = `${Math.floor(item.localHour).toString().padStart(2, '0')}:00`;
+
+        locationItem.appendChild(locationName);
+        locationItem.appendChild(localTime);
+        locationList.appendChild(locationItem);
+    });
+
+    timeBlock.appendChild(japanTime);
+    timeBlock.appendChild(locationList);
+    return timeBlock;
+}
+
+    function updateTimes() {
+        saveHoursToLocalStorage();
+
+        const container = document.getElementById('timeBlocks');
+        container.innerHTML = '';
+
+        const currentDate = new Date();
+        const startHourJP = parseInt(document.getElementById('startHourJP').value);
+        const endHourJP = parseInt(document.getElementById('endHourJP').value);
+
+        for (let hour = startHourJP; hour < endHourJP; hour++) {
+            container.appendChild(createTimeBlock(hour, currentDate));
+        }
+
+        document.getElementById('currentDate').textContent =
+            `Current Date: ${currentDate.toLocaleDateString('en-US', {
+                timeZone: 'Asia/Tokyo',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            })}`;
+    }
+
+    populateHourDropdowns();
+    loadTimezoneData();
+</script>
+
+</body>
+</html>
