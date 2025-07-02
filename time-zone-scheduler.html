@@ -141,6 +141,10 @@
 
 <div class="container">
     <h2>Global Time Zone Scheduler</h2>
+    <div id="excludedCountriesNotice" style="background: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
+        <strong>Note:</strong> The following countries are currently <b>excluded</b> from country copy options: <span id="excludedCountriesList"></span>.<br>
+        <span style="font-size: 0.95em;">You can adjust this list in the code (see <code>EXCLUDED_COUNTRIES</code> in the script).</span>
+    </div>
 
     <div class="controls">
         <div class="control-group">
@@ -172,6 +176,14 @@
 
 <script>
     let timezoneData = {};
+
+    // Centralized exclusion list
+    const EXCLUDED_COUNTRIES = ['Japan', 'Indonesia']; // Adjust as needed
+
+    // Show excluded countries in the notice
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('excludedCountriesList').textContent = EXCLUDED_COUNTRIES.join(', ');
+    });
 
     async function loadTimezoneData() {
         try {
@@ -319,16 +331,14 @@
                 const localHour = (japanHour + localOffsetHours + 24) % 24;
     
                 if (localHour >= startHourCall && localHour < endHourCall) {
-                    // Exclude United States, Canada, and Australia
-                    if (location.country !== 'United States' && 
-                        location.country !== 'Canada' && 
-                        location.country !== 'Australia') {
+                    // Exclude countries in EXCLUDED_COUNTRIES
+                    if (!EXCLUDED_COUNTRIES.includes(location.country)) {
                         // Avoid duplicates
                         if (!countryCodes.includes(location.country_code)) {
                             countryCodes.push(location.country_code);
                             countryNames.push(location.country);
                         }
-                        }
+                    }
                 }
             });
         });
