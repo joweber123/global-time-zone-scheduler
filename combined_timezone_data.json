@@ -154,6 +154,15 @@
           "display_name": "Washington/AMER"
         },
         {
+          "country_code": "US",
+          "region": "AMER",
+          "location_type": "state",
+          "country": "United States",
+          "state": "Oregon",
+          "state_code": "OR",
+          "display_name": "Oregon/AMER"
+        },
+        {
           "country_code": "CA",
           "region": "AMER",
           "location_type": "province",
