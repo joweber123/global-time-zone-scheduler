@@ -10,7 +10,7 @@
             margin: 20px;
         }
         .container {
-            max-width: 1200px;
+            max-width: 1600px;
             margin: auto;
         }
         .controls {
@@ -135,16 +135,49 @@
             margin: 0 0 0 5px;
             font-weight: normal;
         }
+        #svg-world-map-container { 
+            width: 100%; 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            overflow: hidden; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        @media (max-width: 1700px) {
+            .container { max-width: 95%; }
+        }
+        @media (max-width: 768px) {
+            #svg-world-map { height: 400px; }
+        }
+        
+        /* Custom slider styling */
+        #japanHourSlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #007bff;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        #japanHourSlider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #007bff;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>Global Time Zone Scheduler</h2>
-    <div id="excludedCountriesNotice" style="background: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
-        <strong>Note:</strong> The following countries are currently <b>excluded</b> from country copy options: <span id="excludedCountriesList"></span>.<br>
-        <span style="font-size: 0.95em;">You can adjust this list in the code (see <code>EXCLUDED_COUNTRIES</code> in the script).</span>
-    </div>
 
     <div class="controls">
         <div class="control-group">
@@ -156,6 +189,10 @@
             <div class="monday-checkbox-container">
                 <input type="checkbox" id="mondayCheckbox">
                 <label for="mondayCheckbox">Monday?</label>
+            </div>
+            <div class="monday-checkbox-container">
+                <input type="checkbox" id="excludeCountriesCheckbox">
+                <label for="excludeCountriesCheckbox">Exclude US/Canada/Australia</label>
             </div>
         </div>
         
@@ -170,6 +207,21 @@
 
     <button onclick="updateTimes()">Refresh Times</button>
 
+    <div style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 8px;">
+        <label for="japanHourSlider"><b>Focus on Specific Japan Hour:</b> <span id="japanHourLabel">07:00</span></label><br>
+        <div style="position: relative; margin: 20px 0;">
+            <input type="range" id="japanHourSlider" min="0" max="23" value="7" style="width: 100%; margin: 0; -webkit-appearance: none; height: 6px; border-radius: 3px; background: #ddd; outline: none;">
+            <div id="sliderLabels" style="position: relative; margin-top: 5px; font-size: 0.8em; color: #666; height: 15px;"></div>
+        </div>
+        <div style="font-size: 0.9em; color: #666;">
+            Use this slider to see which countries have business hours active at a specific Japan time.
+        </div>
+    </div>
+
+    <div id="svg-world-map-container">
+        <object id="svg-world-map" type="image/svg+xml" data="world-states-provinces.svg" width="100%" height="600"></object>
+    </div>
+
     <h3 id="currentDate"></h3>
     <div id="timeBlocks"></div>
 </div>
@@ -178,20 +230,38 @@
     let timezoneData = {};
 
     // Centralized exclusion list
-    const EXCLUDED_COUNTRIES = ['Japan', 'Indonesia']; // Adjust as needed
-
-    // Show excluded countries in the notice
-    document.addEventListener('DOMContentLoaded', function() {
-        document.getElementById('excludedCountriesList').textContent = EXCLUDED_COUNTRIES.join(', ');
-    });
+    const EXCLUDED_COUNTRIES = ['United States', 'Canada', 'Australia'];
 
     async function loadTimezoneData() {
         try {
             const response = await fetch('combined_timezone_data.json');
             timezoneData = await response.json();
             updateTimes();
+            // Initialize map highlighting after data is loaded
+            initializeMapHighlighting();
         } catch (error) {
             console.error('Error loading timezone data:', error);
+        }
+    }
+
+    function initializeMapHighlighting() {
+        const svgObject = document.getElementById('svg-world-map');
+        const currentSliderHour = parseInt(document.getElementById('japanHourSlider').value);
+        
+        // Always wait for the SVG to be fully loaded before highlighting
+        if (svgObject.contentDocument) {
+            // Even if contentDocument exists, add a small delay to ensure full initialization
+            setTimeout(() => {
+                updateMapForSpecificHour(currentSliderHour);
+            }, 100);
+        } else {
+            // Wait for SVG to load, then highlight
+            svgObject.addEventListener('load', () => {
+                // Add delay after load event to ensure SVG is fully ready
+                setTimeout(() => {
+                    updateMapForSpecificHour(currentSliderHour);
+                }, 100);
+            }, { once: true });
         }
     }
 
@@ -234,6 +304,181 @@
     function getOffsetSeconds(timezone, currentDate) {
         const tzData = timezone.timezone_data;
         return isDST(timezone, currentDate) ? tzData.dst_offset_seconds : tzData.standard_offset_seconds;
+    }
+
+    function highlightCountriesOnMap(countryCodes, stateProvinceCodes = {}) {
+        // Wait for SVG to load
+        const svgObject = document.getElementById('svg-world-map');
+        if (!svgObject.contentDocument) {
+            svgObject.addEventListener('load', () => highlightCountriesOnMap(countryCodes, stateProvinceCodes), { once: true });
+            return;
+        }
+        const svgDoc = svgObject.contentDocument;
+        
+        // Hide Antarctica
+        const antarctica = svgDoc.getElementById('AQ');
+        if (antarctica) {
+            antarctica.style.display = 'none';
+        }
+        
+        // Hide ocean layer
+        const ocean = svgDoc.getElementById('Ocean');
+        if (ocean) {
+            ocean.style.display = 'none';
+        }
+        
+        // Reset all countries and states to default color first
+        const allCountryGroups = svgDoc.querySelectorAll('g[id]');
+        allCountryGroups.forEach(group => {
+            if (group.id && group.id.length === 2 && group.id.match(/^[A-Z]{2}$/)) {
+                // Set fill for all path elements within the country group
+                const paths = group.querySelectorAll('path');
+                paths.forEach(path => {
+                    path.style.fill = '#e0e0e0';
+                    path.style.stroke = '#888';
+                    path.style.strokeWidth = '0.5';
+                });
+            }
+        });
+        
+        // Also reset all state/province elements specifically (including nested ones)
+        const stateElements = svgDoc.querySelectorAll('[id^="US-"], [id^="CA-"], [id^="AU-"]');
+        stateElements.forEach(element => {
+            element.style.fill = '#e0e0e0';
+            element.style.stroke = '#888';
+            element.style.strokeWidth = '0.5';
+        });
+        
+        // For US, CA, AU - remove fills from country-level paths but keep state/province fills
+        ['US', 'CA', 'AU'].forEach(countryCode => {
+            const countryGroup = svgDoc.getElementById(countryCode);
+            if (countryGroup) {
+                // Remove fill from the group itself if it has one
+                countryGroup.style.fill = 'none';
+                
+                const paths = countryGroup.querySelectorAll('path');
+                paths.forEach(path => {
+                    // Only remove fill if this is NOT a state/province element
+                    if (!path.id || !path.id.match(/^(US|CA|AU)-[A-Z]{2,3}(-|$)/)) {
+                        path.style.fill = 'none';
+                        path.style.stroke = '#888';
+                        path.style.strokeWidth = '0.5';
+                    }
+                });
+            }
+        });
+
+        // Highlight selected countries (non-US/CA/AU)
+        countryCodes.forEach(code => {
+            const countryCode = code.toUpperCase();
+            
+            // Skip US, CA, AU - they'll be handled by state/province highlighting
+            if (countryCode === 'US' || countryCode === 'CA' || countryCode === 'AU') {
+                return;
+            }
+            
+            const countryGroup = svgDoc.getElementById(countryCode);
+            if (countryGroup) {
+                // Highlight all path elements within the country group
+                const paths = countryGroup.querySelectorAll('path');
+                paths.forEach(path => {
+                    path.style.fill = '#87CEEB';
+                    path.style.stroke = '#888';
+                    path.style.strokeWidth = '0.5';
+                });
+            }
+        });
+        
+        // Highlight specific states/provinces for US, CA, AU
+        Object.keys(stateProvinceCodes).forEach(country => {
+            const codes = stateProvinceCodes[country];
+            codes.forEach(code => {
+                let elementId;
+                if (country === 'US') {
+                    elementId = `US-${code}`;
+                } else if (country === 'CA') {
+                    elementId = `CA-${code}`;
+                } else if (country === 'AU') {
+                    elementId = `AU-${code}`;
+                }
+                
+                if (elementId) {
+                    const stateElement = svgDoc.getElementById(elementId);
+                    if (stateElement) {
+                        const fillColor = '#87CEEB';
+                        
+                        stateElement.style.fill = fillColor;
+                        stateElement.style.stroke = '#888';
+                        stateElement.style.strokeWidth = '0.5';
+                        
+                        // Also fill any nested elements that start with the same ID
+                        const nestedElements = svgDoc.querySelectorAll(`[id^="${elementId}-"]`);
+                        nestedElements.forEach(nestedElement => {
+                            nestedElement.style.fill = fillColor;
+                            nestedElement.style.stroke = '#888';
+                            nestedElement.style.strokeWidth = '0.5';
+                        });
+                        
+                        console.log(`Successfully highlighted ${country} state: ${elementId} (and ${nestedElements.length} nested elements)`);
+                    } else {
+                        console.log(`Element not found for ${country} state: ${elementId}`);
+                    }
+                }
+            });
+        });
+    }
+
+    function updateMapForSpecificHour(japanHour) {
+        const currentDate = new Date();
+        const japanOffsetSeconds = 32400;
+        const startHourCall = parseInt(document.getElementById('startHourCall').value);
+        const endHourCall = parseInt(document.getElementById('endHourCall').value);
+        const highlightedCountries = new Set();
+        const stateProvinceCodes = { US: [], CA: [], AU: [] };
+
+        Object.entries(timezoneData).forEach(([tz, data]) => {
+            data.locations.forEach(location => {
+                const offsetSeconds = getOffsetSeconds(data, currentDate);
+                const localOffsetHours = (offsetSeconds - japanOffsetSeconds) / 3600;
+                const localHour = (japanHour + localOffsetHours + 24) % 24;
+
+                // Add condition to exclude US and Canada if Monday checkbox is checked
+                const isMondayChecked = document.getElementById('mondayCheckbox').checked;
+                if (isMondayChecked && 
+                    (location.country === 'United States' || location.country === 'Canada')) {
+                    return; // Skip these locations
+                }
+
+                if (localHour >= startHourCall && localHour < endHourCall) {
+                    // Exclude countries if checkbox is checked
+                    const excludeCountriesChecked = document.getElementById('excludeCountriesCheckbox').checked;
+                    if (!excludeCountriesChecked || !EXCLUDED_COUNTRIES.includes(location.country)) {
+                        
+                        // Handle US, Canada, Australia with state/province highlighting
+                        if (location.country_code === 'US' && location.state_code) {
+                            stateProvinceCodes.US.push(location.state_code);
+                        } else if (location.country_code === 'CA' && location.province_code) {
+                            stateProvinceCodes.CA.push(location.province_code);
+                        } else if (location.country_code === 'AU' && location.state_code) {
+                            stateProvinceCodes.AU.push(location.state_code);
+                        } else {
+                            // For all other countries, highlight the whole country
+                            highlightedCountries.add(location.country_code);
+                        }
+                    }
+                }
+            });
+        });
+
+        // Remove duplicates from state/province arrays
+        stateProvinceCodes.US = [...new Set(stateProvinceCodes.US)];
+        stateProvinceCodes.CA = [...new Set(stateProvinceCodes.CA)];
+        stateProvinceCodes.AU = [...new Set(stateProvinceCodes.AU)];
+
+        // Debug: Log what we found
+        console.log('State/Province codes collected:', stateProvinceCodes);
+
+        highlightCountriesOnMap(Array.from(highlightedCountries), stateProvinceCodes);
     }
 
 
@@ -331,8 +576,9 @@
                 const localHour = (japanHour + localOffsetHours + 24) % 24;
     
                 if (localHour >= startHourCall && localHour < endHourCall) {
-                    // Exclude countries in EXCLUDED_COUNTRIES
-                    if (!EXCLUDED_COUNTRIES.includes(location.country)) {
+                    // Exclude countries if checkbox is checked
+                    const excludeCountriesChecked = document.getElementById('excludeCountriesCheckbox').checked;
+                    if (!excludeCountriesChecked || !EXCLUDED_COUNTRIES.includes(location.country)) {
                         // Avoid duplicates
                         if (!countryCodes.includes(location.country_code)) {
                             countryCodes.push(location.country_code);
@@ -429,9 +675,42 @@
         const startHourJP = parseInt(document.getElementById('startHourJP').value);
         const endHourJP = parseInt(document.getElementById('endHourJP').value);
 
+        // Collect all country codes that should be highlighted across all time blocks
+        const allHighlightedCountries = new Set();
+        const japanOffsetSeconds = 32400;
+        const startHourCall = parseInt(document.getElementById('startHourCall').value);
+        const endHourCall = parseInt(document.getElementById('endHourCall').value);
+
         for (let hour = startHourJP; hour < endHourJP; hour++) {
             container.appendChild(createTimeBlock(hour, currentDate));
+            
+            // Collect countries for this hour for map highlighting
+            Object.entries(timezoneData).forEach(([tz, data]) => {
+                data.locations.forEach(location => {
+                    const offsetSeconds = getOffsetSeconds(data, currentDate);
+                    const localOffsetHours = (offsetSeconds - japanOffsetSeconds) / 3600;
+                    const localHour = (hour + localOffsetHours + 24) % 24;
+
+                    // Add condition to exclude US and Canada if Monday checkbox is checked
+                    const isMondayChecked = document.getElementById('mondayCheckbox').checked;
+                    if (isMondayChecked && 
+                        (location.country === 'United States' || location.country === 'Canada')) {
+                        return; // Skip these locations
+                    }
+
+                    if (localHour >= startHourCall && localHour < endHourCall) {
+                        // Exclude countries if checkbox is checked
+                        const excludeCountriesChecked = document.getElementById('excludeCountriesCheckbox').checked;
+                        if (!excludeCountriesChecked || !EXCLUDED_COUNTRIES.includes(location.country)) {
+                            allHighlightedCountries.add(location.country_code);
+                        }
+                    }
+                });
+            });
         }
+
+        // Note: Map highlighting is now controlled by the slider, not by the time blocks
+        // The time blocks show all countries, but the map shows only the slider-selected hour
 
         document.getElementById('currentDate').textContent =
             `Current Date: ${currentDate.toLocaleDateString('en-US', {
@@ -441,6 +720,59 @@
                 day: 'numeric'
             })}`;
     }
+
+    // Generate slider time labels
+    function generateSliderLabels() {
+        const labelsContainer = document.getElementById('sliderLabels');
+        labelsContainer.innerHTML = '';
+        
+        // Show labels every 3 hours: 00, 03, 06, 09, 12, 15, 18, 21
+        for (let hour = 0; hour <= 21; hour += 3) {
+            const label = document.createElement('span');
+            label.textContent = hour.toString().padStart(2, '0') + ':00';
+            label.style.position = 'absolute';
+            label.style.fontSize = '0.75em';
+            label.style.color = '#666';
+            label.style.transform = 'translateX(-50%)';
+            
+            // Calculate the position as a percentage (hour/23 * 100%)
+            const position = (hour / 23) * 100;
+            label.style.left = position + '%';
+            
+            labelsContainer.appendChild(label);
+        }
+    }
+
+    // Initialize slider functionality and checkbox listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        const slider = document.getElementById('japanHourSlider');
+        const label = document.getElementById('japanHourLabel');
+        
+        // Generate time labels for slider
+        generateSliderLabels();
+        
+        slider.addEventListener('input', function() {
+            const currentHour = parseInt(slider.value, 10);
+            label.textContent = currentHour.toString().padStart(2, '0') + ':00';
+            updateMapForSpecificHour(currentHour);
+        });
+        
+        // Set initial label
+        label.textContent = slider.value.toString().padStart(2, '0') + ':00';
+        
+        // Add listeners for checkboxes to update display when changed
+        document.getElementById('mondayCheckbox').addEventListener('change', function() {
+            updateTimes();
+            const currentHour = parseInt(slider.value, 10);
+            updateMapForSpecificHour(currentHour);
+        });
+        
+        document.getElementById('excludeCountriesCheckbox').addEventListener('change', function() {
+            updateTimes();
+            const currentHour = parseInt(slider.value, 10);
+            updateMapForSpecificHour(currentHour);
+        });
+    });
 
     populateHourDropdowns();
     loadTimezoneData();
