@@ -238,8 +238,15 @@
         </div>
     </div>
 
-    <div id="svg-world-map-container">
-        <object id="svg-world-map" type="image/svg+xml" data="world-states-provinces.svg" width="100%" height="600"></object>
+    <div style="display: flex; gap: 20px; margin: 20px 0;">
+        <div style="flex: 2; min-width: 320px;">
+            <div id="svg-world-map-container">
+                <object id="svg-world-map" type="image/svg+xml" data="world-states-provinces.svg" width="100%" height="600"></object>
+            </div>
+        </div>
+        <div style="flex: 1; min-width: 240px; max-width: 480px;">
+            <div id="focusedTimeBlock"></div>
+        </div>
     </div>
 
     <h3 id="currentDate"></h3>
@@ -277,6 +284,8 @@
             updateTimes();
             // Initialize map highlighting after data is loaded
             initializeMapHighlighting();
+            // Render initial focused time block for 7am
+            renderFocusedTimeBlock(7);
         } catch (error) {
             console.error('Error loading timezone data:', error);
         }
@@ -1174,22 +1183,27 @@
             const currentHour = parseInt(slider.value, 10);
             label.textContent = currentHour.toString().padStart(2, '0') + ':00';
             updateMapForSpecificHour(currentHour);
+            renderFocusedTimeBlock(currentHour);
         });
         
         // Set initial label
         label.textContent = slider.value.toString().padStart(2, '0') + ':00';
+        // Render initial focused time block
+        renderFocusedTimeBlock(parseInt(slider.value, 10));
         
         // Add listeners for checkboxes to update display when changed
         document.getElementById('mondayCheckbox').addEventListener('change', function() {
             updateTimes();
             const currentHour = parseInt(slider.value, 10);
             updateMapForSpecificHour(currentHour);
+            renderFocusedTimeBlock(currentHour);
         });
         
         document.getElementById('excludeCountriesCheckbox').addEventListener('change', function() {
             updateTimes();
             const currentHour = parseInt(slider.value, 10);
             updateMapForSpecificHour(currentHour);
+            renderFocusedTimeBlock(currentHour);
         });
 
         // Add change listeners to the dropdowns to auto-refresh times
@@ -1205,6 +1219,15 @@
 
     populateHourDropdowns();
     loadTimezoneData();
+
+    // Add a function to render the focused time block for the selected Japan hour
+    function renderFocusedTimeBlock(japanHour) {
+        const container = document.getElementById('focusedTimeBlock');
+        container.innerHTML = '';
+        const currentDate = new Date();
+        const block = createTimeBlock(japanHour, currentDate);
+        container.appendChild(block);
+    }
 </script>
 
 </body>
