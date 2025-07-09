@@ -125,6 +125,20 @@
         .location-type-state { color: #3498db; }
         .location-type-province { color: #2ecc71; }
         .location-type-territory { color: #e74c3c; }
+        .utc-offset-group {
+            margin-top: 15px;
+            margin-bottom: 10px;
+        }
+        .utc-offset-title {
+            font-weight: bold;
+            font-size: 0.9em;
+            color: #333;
+            margin-bottom: 8px;
+            padding: 5px 10px;
+            background: #e8f4f8;
+            border-left: 4px solid #007bff;
+            border-radius: 3px;
+        }
         .monday-checkbox-container {
             display: flex;
             align-items: center;
@@ -228,6 +242,7 @@
 
 <script>
     let timezoneData = {};
+    let pmAssignments = {};
 
     // Centralized exclusion list
     const EXCLUDED_COUNTRIES = ['United States', 'Canada', 'Australia'];
@@ -236,6 +251,23 @@
         try {
             const response = await fetch('combined_timezone_data.json');
             timezoneData = await response.json();
+            
+            // Load PM assignments
+            const pmResponse = await fetch('pm_timezone_availability.json');
+            const pmData = await pmResponse.json();
+            
+            // Convert PM data to lookup object
+            pmData.forEach(item => {
+                const offset = item['UTC Offset'];
+                const assignment1 = item['PM Assignment #1'];
+                const assignment2 = item['PM Assignment #2'];
+                
+                pmAssignments[offset] = {
+                    primary: assignment1,
+                    secondary: assignment2
+                };
+            });
+            
             updateTimes();
             // Initialize map highlighting after data is loaded
             initializeMapHighlighting();
@@ -481,6 +513,16 @@
         highlightCountriesOnMap(Array.from(highlightedCountries), stateProvinceCodes);
     }
 
+    function getPMAssignmentText(utcOffset) {
+        const assignment = pmAssignments[utcOffset];
+        if (!assignment) return '';
+        
+        let text = ` - ${assignment.primary}`;
+        if (assignment.secondary) {
+            text += ` | ${assignment.secondary}`;
+        }
+        return text;
+    }
 
     function createTimeBlock(japanHour, currentDate) {
             const timeBlock = document.createElement('div');
@@ -612,52 +654,97 @@
         return getLocationName(a.location).localeCompare(getLocationName(b.location));
     });
 
-    // Create DOM elements for sorted locations
+    // Group locations by UTC offset
+    const offsetGroups = {};
     locationsWithTimes.forEach(item => {
-        // Determine the specific location name based on location type
-        const specificLocationName = 
-            item.location.state || 
-            item.location.province ||
-            item.location.country;
+        const offsetSeconds = getOffsetSeconds(item.data, currentDate);
+        const utcOffset = offsetSeconds / 3600;
+        const offsetLabel = `UTC${utcOffset >= 0 ? '+' : ''}${utcOffset}`;
         
-        // Ensure we always have a name to display
-        if (!specificLocationName) {
-            console.warn('Location without a name:', item.location);
-            return;
+        if (!offsetGroups[offsetLabel]) {
+            offsetGroups[offsetLabel] = [];
         }
+        offsetGroups[offsetLabel].push(item);
+    });
 
-        const locationItem = document.createElement('div');
-        locationItem.className = 'location-item';
-
-        const locationName = document.createElement('div');
-        locationName.className = 'location-name';
+    // Sort offset groups by numeric UTC offset
+    const sortedOffsetKeys = Object.keys(offsetGroups).sort((a, b) => {
+        const aNum = parseFloat(a.replace('UTC', ''));
+        const bNum = parseFloat(b.replace('UTC', ''));
         
-        // Display location name with country
-        locationName.innerHTML = `${specificLocationName} ${item.location.country && specificLocationName !== item.location.country ? `(${item.location.country})` : ''}`;
-        
-        // Add location type tag
-        if (item.location.location_type && item.location.location_type !== 'country') {
-            const typeTag = document.createElement('span');
-            typeTag.className = `location-type-tag location-type-${item.location.location_type}`;
-            typeTag.textContent = item.location.location_type;
-            locationName.appendChild(typeTag);
+        // Positive offsets first (ascending), then negative offsets (descending)
+        if (aNum >= 0 && bNum >= 0) {
+            return aNum - bNum; // Both positive: ascending order
+        } else if (aNum < 0 && bNum < 0) {
+            return aNum - bNum; // Both negative: descending order by absolute value (-11, -10, -9)
+        } else {
+            return bNum - aNum; // Mixed: positive comes first
         }
+    });
+
+    // Create DOM elements for each UTC offset group
+    sortedOffsetKeys.forEach(offsetLabel => {
+        const groupContainer = document.createElement('div');
+        groupContainer.className = 'utc-offset-group';
         
-        // Add DST indicator if applicable
-        if (item.isDST) {
-            const dstIndicator = document.createElement('span');
-            dstIndicator.className = 'dst-indicator';
-            dstIndicator.textContent = `DST Active (${item.data.timezone_data.dst_name})`;
-            locationName.appendChild(dstIndicator);
-        }
+        const groupTitle = document.createElement('div');
+        groupTitle.className = 'utc-offset-title';
+        
+        // Extract numeric offset and add PM assignment
+        const numericOffset = parseFloat(offsetLabel.replace('UTC', ''));
+        const pmText = getPMAssignmentText(numericOffset);
+        groupTitle.textContent = offsetLabel + pmText;
+        
+        groupContainer.appendChild(groupTitle);
+        
+        offsetGroups[offsetLabel].forEach(item => {
+            // Determine the specific location name based on location type
+            const specificLocationName = 
+                item.location.state || 
+                item.location.province ||
+                item.location.country;
+            
+            // Ensure we always have a name to display
+            if (!specificLocationName) {
+                console.warn('Location without a name:', item.location);
+                return;
+            }
 
-        const localTime = document.createElement('div');
-        localTime.className = 'local-time';
-        localTime.textContent = `${Math.floor(item.localHour).toString().padStart(2, '0')}:00`;
+            const locationItem = document.createElement('div');
+            locationItem.className = 'location-item';
 
-        locationItem.appendChild(locationName);
-        locationItem.appendChild(localTime);
-        locationList.appendChild(locationItem);
+            const locationName = document.createElement('div');
+            locationName.className = 'location-name';
+            
+            // Display location name with country
+            locationName.innerHTML = `${specificLocationName} ${item.location.country && specificLocationName !== item.location.country ? `(${item.location.country})` : ''}`;
+            
+            // Add location type tag
+            if (item.location.location_type && item.location.location_type !== 'country') {
+                const typeTag = document.createElement('span');
+                typeTag.className = `location-type-tag location-type-${item.location.location_type}`;
+                typeTag.textContent = item.location.location_type;
+                locationName.appendChild(typeTag);
+            }
+            
+            // Add DST indicator if applicable
+            if (item.isDST) {
+                const dstIndicator = document.createElement('span');
+                dstIndicator.className = 'dst-indicator';
+                dstIndicator.textContent = `DST Active (${item.data.timezone_data.dst_name})`;
+                locationName.appendChild(dstIndicator);
+            }
+
+            const localTime = document.createElement('div');
+            localTime.className = 'local-time';
+            localTime.textContent = `${Math.floor(item.localHour).toString().padStart(2, '0')}:00`;
+
+            locationItem.appendChild(locationName);
+            locationItem.appendChild(localTime);
+            groupContainer.appendChild(locationItem);
+        });
+        
+        locationList.appendChild(groupContainer);
     });
 
     timeBlock.appendChild(japanTime);
