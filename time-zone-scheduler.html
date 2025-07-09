@@ -244,8 +244,8 @@
                 <object id="svg-world-map" type="image/svg+xml" data="world-states-provinces.svg" width="100%" height="600"></object>
             </div>
         </div>
-        <div style="flex: 1; min-width: 240px; max-width: 480px;">
-            <div id="focusedTimeBlock"></div>
+        <div style="flex: 1; min-width: 240px; max-width: 480px; height: 600px;">
+            <div id="focusedTimeBlock" style="height: 100%; overflow-y: auto;"></div>
         </div>
     </div>
 
@@ -539,7 +539,7 @@
         return text;
     }
 
-    function createTimeBlock(japanHour, currentDate) {
+    function createTimeBlock(japanHour, currentDate, showCopyButtons = true) {
             const timeBlock = document.createElement('div');
             timeBlock.className = 'time-block';
 
@@ -564,7 +564,9 @@
             copyButtons.appendChild(copyCountryBtn);
 
             japanTime.appendChild(japanTimeText);
-            japanTime.appendChild(copyButtons);
+            if (showCopyButtons) {
+                japanTime.appendChild(copyButtons);
+            }
 
             const locationList = document.createElement('div');
             locationList.className = 'location-list';
@@ -784,7 +786,7 @@
         const endHourCall = parseInt(document.getElementById('endHourCall').value);
 
         for (let hour = startHourJP; hour < endHourJP; hour++) {
-            container.appendChild(createTimeBlock(hour, currentDate));
+            container.appendChild(createTimeBlock(hour, currentDate, true)); // true = show copy buttons
             
             // Collect countries for this hour for map highlighting
             Object.entries(timezoneData).forEach(([tz, data]) => {
@@ -1225,10 +1227,238 @@
         const container = document.getElementById('focusedTimeBlock');
         container.innerHTML = '';
         const currentDate = new Date();
-        const block = createTimeBlock(japanHour, currentDate);
+        const block = createTimeBlock(japanHour, currentDate, false); // false = do not show copy buttons
+        if (block && block.style) block.style.marginTop = '0';
         container.appendChild(block);
     }
-</script>
 
-</body>
-</html>
+    // Update createTimeBlock to accept a showCopyButtons flag (default true)
+    function createTimeBlock(japanHour, currentDate, showCopyButtons = true) {
+        const timeBlock = document.createElement('div');
+        timeBlock.className = 'time-block';
+
+        const japanTime = document.createElement('div');
+        japanTime.className = 'japan-time';
+
+        const japanTimeText = document.createElement('span');
+        japanTimeText.textContent = `${japanHour.toString().padStart(2, '0')}:00 JST`;
+
+        const copyButtons = document.createElement('div');
+        copyButtons.className = 'copy-buttons';
+
+        const copyStateProvinceBtn = document.createElement('button');
+        copyStateProvinceBtn.className = 'copy-btn copy-state-province';
+        copyStateProvinceBtn.textContent = 'Copy State/Province';
+
+        const copyCountryBtn = document.createElement('button');
+        copyCountryBtn.className = 'copy-btn copy-country';
+        copyCountryBtn.textContent = 'Copy Country';
+
+        copyButtons.appendChild(copyStateProvinceBtn);
+        copyButtons.appendChild(copyCountryBtn);
+
+        japanTime.appendChild(japanTimeText);
+        if (showCopyButtons) {
+            japanTime.appendChild(copyButtons);
+        }
+
+        const locationList = document.createElement('div');
+        locationList.className = 'location-list';
+
+        const japanOffsetSeconds = 32400;
+        const startHourCall = parseInt(document.getElementById('startHourCall').value);
+        const endHourCall = parseInt(document.getElementById('endHourCall').value);
+
+        // Collect all locations with their calculated times
+        let locationsWithTimes = [];
+        let stateProvinceCodes = [];
+        let stateProvinceNames = [];
+
+        Object.entries(timezoneData).forEach(([tz, data]) => {
+            data.locations.forEach(location => {
+                const offsetSeconds = getOffsetSeconds(data, currentDate);
+                const localOffsetHours = (offsetSeconds - japanOffsetSeconds) / 3600;
+                const localHour = (japanHour + localOffsetHours + 24) % 24;
+
+                // Add condition to exclude US and Canada if Monday checkbox is checked
+                const isMondayChecked = document.getElementById('mondayCheckbox').checked;
+                if (isMondayChecked && 
+                    (location.country === 'United States' || location.country === 'Canada')) {
+                    return; // Skip these locations
+                }
+
+                if (localHour >= startHourCall && localHour < endHourCall) {
+                    locationsWithTimes.push({
+                        location: location,
+                        localHour: localHour,
+                        data: data,
+                        isDST: isDST(data, currentDate)
+                    });
+
+                    // Collect state/province codes and names
+                    if (location.location_type === 'state' && location.state_code) {
+                        stateProvinceCodes.push(location.state_code);
+                        stateProvinceNames.push(location.state);
+                    } else if (location.location_type === 'province' && location.province_code) {
+                        stateProvinceCodes.push(location.province_code);
+                        stateProvinceNames.push(location.province);
+                    }
+                }
+            });
+        });
+
+    // Add copy event listener for State/Province button
+    copyStateProvinceBtn.addEventListener('click', () => {
+        const combinedList = [...stateProvinceCodes, ...stateProvinceNames].join(';');
+        navigator.clipboard.writeText(combinedList).then(() => {
+            copyStateProvinceBtn.textContent = 'Copied!';
+            setTimeout(() => {
+                copyStateProvinceBtn.textContent = 'Copy State/Province';
+            }, 2000);
+        });
+    });
+
+    copyCountryBtn.addEventListener('click', () => {
+        const countryCodes = [];
+        const countryNames = [];
+
+        Object.entries(timezoneData).forEach(([tz, data]) => {
+            data.locations.forEach(location => {
+                const offsetSeconds = getOffsetSeconds(data, currentDate);
+                const localOffsetHours = (offsetSeconds - japanOffsetSeconds) / 3600;
+                const localHour = (japanHour + localOffsetHours + 24) % 24;
+    
+                if (localHour >= startHourCall && localHour < endHourCall) {
+                    // Exclude countries if checkbox is checked
+                    const excludeCountriesChecked = document.getElementById('excludeCountriesCheckbox').checked;
+                    if (!excludeCountriesChecked || !EXCLUDED_COUNTRIES.includes(location.country)) {
+                        // Avoid duplicates
+                        if (!countryCodes.includes(location.country_code)) {
+                            countryCodes.push(location.country_code);
+                            countryNames.push(location.country);
+                        }
+                    }
+                }
+            });
+        });
+
+        const combinedList = [...countryCodes, ...countryNames].join(';');
+        navigator.clipboard.writeText(combinedList).then(() => {
+            copyCountryBtn.textContent = 'Copied!';
+            setTimeout(() => {
+                copyCountryBtn.textContent = 'Copy Country';
+            }, 2000);
+        });
+    });
+
+    // Sort by local hour first, then alphabetically by location name
+    locationsWithTimes.sort((a, b) => {
+        if (a.localHour !== b.localHour) {
+            return a.localHour - b.localHour;
+        }
+        
+        // Get the location name, with fallback
+        const getLocationName = (location) => {
+            return location.state || location.province || location.country || 'Unknown';
+        };
+        
+        return getLocationName(a.location).localeCompare(getLocationName(b.location));
+    });
+
+    // Group locations by UTC offset
+    const offsetGroups = {};
+    locationsWithTimes.forEach(item => {
+        const offsetSeconds = getOffsetSeconds(item.data, currentDate);
+        const utcOffset = offsetSeconds / 3600;
+        const offsetLabel = `UTC${utcOffset >= 0 ? '+' : ''}${utcOffset}`;
+        
+        if (!offsetGroups[offsetLabel]) {
+            offsetGroups[offsetLabel] = [];
+        }
+        offsetGroups[offsetLabel].push(item);
+    });
+
+    // Sort offset groups by numeric UTC offset
+    const sortedOffsetKeys = Object.keys(offsetGroups).sort((a, b) => {
+        const aNum = parseFloat(a.replace('UTC', ''));
+        const bNum = parseFloat(b.replace('UTC', ''));
+        
+        // Positive offsets first (ascending), then negative offsets (descending)
+        if (aNum >= 0 && bNum >= 0) {
+            return aNum - bNum; // Both positive: ascending order
+        } else if (aNum < 0 && bNum < 0) {
+            return aNum - bNum; // Both negative: descending order by absolute value (-11, -10, -9)
+        } else {
+            return bNum - aNum; // Mixed: positive comes first
+        }
+    });
+
+    // Create DOM elements for each UTC offset group
+    sortedOffsetKeys.forEach(offsetLabel => {
+        const groupContainer = document.createElement('div');
+        groupContainer.className = 'utc-offset-group';
+        
+        const groupTitle = document.createElement('div');
+        groupTitle.className = 'utc-offset-title';
+        
+        // Extract numeric offset and add PM assignment
+        const numericOffset = parseFloat(offsetLabel.replace('UTC', ''));
+        const pmText = getPMAssignmentText(numericOffset);
+        groupTitle.textContent = offsetLabel + pmText;
+        
+        groupContainer.appendChild(groupTitle);
+        
+        offsetGroups[offsetLabel].forEach(item => {
+            // Determine the specific location name based on location type
+            const specificLocationName = 
+                item.location.state || 
+                item.location.province ||
+                item.location.country;
+            
+            // Ensure we always have a name to display
+            if (!specificLocationName) {
+                console.warn('Location without a name:', item.location);
+                return;
+            }
+
+            const locationItem = document.createElement('div');
+            locationItem.className = 'location-item';
+
+            const locationName = document.createElement('div');
+            locationName.className = 'location-name';
+            
+            // Display location name with country
+            locationName.innerHTML = `${specificLocationName} ${item.location.country && specificLocationName !== item.location.country ? `(${item.location.country})` : ''}`;
+            
+            // Add location type tag
+            if (item.location.location_type && item.location.location_type !== 'country') {
+                const typeTag = document.createElement('span');
+                typeTag.className = `location-type-tag location-type-${item.location.location_type}`;
+                typeTag.textContent = item.location.location_type;
+                locationName.appendChild(typeTag);
+            }
+            
+            // Add DST indicator if applicable
+            if (item.isDST) {
+                const dstIndicator = document.createElement('span');
+                dstIndicator.className = 'dst-indicator';
+                dstIndicator.textContent = `DST Active (${item.data.timezone_data.dst_name})`;
+                locationName.appendChild(dstIndicator);
+            }
+
+            const localTime = document.createElement('div');
+            localTime.className = 'local-time';
+            localTime.textContent = `${Math.floor(item.localHour).toString().padStart(2, '0')}:00`;
+
+            locationItem.appendChild(locationName);
+            locationItem.appendChild(localTime);
+            groupContainer.appendChild(locationItem);
+        });
+        
+        locationList.appendChild(groupContainer);
+    });
+
+    timeBlock.appendChild(japanTime);
+    timeBlock.appendChild(locationList);
+    return timeBlock;
+}
