@@ -1,0 +1,267 @@
+[
+    {
+        "UTC Offset":-13.0,
+        "PM Assignment #1":"AMER - WEST PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-12.5,
+        "PM Assignment #1":"AMER - WEST PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-12.0,
+        "PM Assignment #1":"AMER - WEST PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-11.5,
+        "PM Assignment #1":"AMER - WEST PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-11.0,
+        "PM Assignment #1":"AMER - WEST PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-10.5,
+        "PM Assignment #1":"AMER - WEST PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-10.0,
+        "PM Assignment #1":"AMER - WEST PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-9.5,
+        "PM Assignment #1":"AMER - WEST PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-9.0,
+        "PM Assignment #1":"AMER - WEST PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-8.5,
+        "PM Assignment #1":"AMER - WEST PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-8.0,
+        "PM Assignment #1":"AMER - WEST PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-7.5,
+        "PM Assignment #1":"AMER - WEST PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-7.0,
+        "PM Assignment #1":"AMER - PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-6.5,
+        "PM Assignment #1":"AMER - PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-6.0,
+        "PM Assignment #1":"AMER - PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-5.5,
+        "PM Assignment #1":"AMER - PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-5.0,
+        "PM Assignment #1":"AMER - PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-4.5,
+        "PM Assignment #1":"AMER - PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-4.0,
+        "PM Assignment #1":"AMER - PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-3.5,
+        "PM Assignment #1":"AMER - PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-3.0,
+        "PM Assignment #1":"AMER - PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-2.5,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-2.0,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-1.5,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-1.0,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":-0.5,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":0.0,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":0.5,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":1.0,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":1.5,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":2.0,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":2.5,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":3.0,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":3.5,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":4.0,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":4.5,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":5.0,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":5.5,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":6.0,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":6.5,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":7.0,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":7.5,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":8.0,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":8.5,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":9.0,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":"AMER - WEST PM"
+    },
+    {
+        "UTC Offset":9.5,
+        "PM Assignment #1":"EMEA PM",
+        "PM Assignment #2":"AMER - WEST PM"
+    },
+    {
+        "UTC Offset":10.0,
+        "PM Assignment #1":"AMER - WEST PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":10.5,
+        "PM Assignment #1":"AMER - WEST PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":11.0,
+        "PM Assignment #1":"AMER - WEST PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":11.5,
+        "PM Assignment #1":"AMER - WEST PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":12.0,
+        "PM Assignment #1":"AMER - WEST PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":12.5,
+        "PM Assignment #1":"AMER - WEST PM",
+        "PM Assignment #2":null
+    },
+    {
+        "UTC Offset":13.0,
+        "PM Assignment #1":"AMER - WEST PM",
+        "PM Assignment #2":null
+    }
+]
