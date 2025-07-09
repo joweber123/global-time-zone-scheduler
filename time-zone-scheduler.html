@@ -3,87 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Time Zone Buddy</title>
+    <title>Business Hours Alignment</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            margin: 1.25em; /* 20px */
         }
         .container {
-            max-width: 1600px;
+            max-width: 100em; /* 1600px */
             margin: auto;
-            transform: scale(0.9);
-            transform-origin: top center;
+            font-size: 90%;
         }
         .controls {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-            margin-bottom: 20px;
+            gap: 1.25em; /* 20px */
+            margin-bottom: 1.25em; /* 20px */
         }
         .control-group {
             background: #f5f5f5;
-            padding: 15px;
-            border-radius: 8px;
+            padding: 0.94em; /* 15px */
+            border-radius: 0.5em; /* 8px */
         }
         label {
             font-weight: bold;
-            margin-top: 10px;
+            margin-top: 0.625em; /* 10px */
             display: block;
         }
         select {
             width: 100%;
-            padding: 8px;
-            margin: 5px 0;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            padding: 0.5em; /* 8px */
+            margin: 0.31em 0; /* 5px 0 */
+            border: 0.06em solid #ddd; /* 1px */
+            border-radius: 0.25em; /* 4px */
         }
         button {
             background: #007bff;
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
+            padding: 0.625em 1.25em; /* 10px 20px */
+            border-radius: 0.25em; /* 4px */
             cursor: pointer;
         }
         button:hover {
             background: #0056b3;
         }
         .copy-buttons button{
-            margin-right: 5px;
-            width: 170px;
-            margin-bottom: 3px;
+            margin-right: 0.31em; /* 5px */
+            width: 10.625em; /* 170px */
+            margin-bottom: 0.19em; /* 3px */
         }
         #timeBlocks {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); /* Two columns on larger screens */
-    gap: 20px; /* Space between blocks */
-}
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(25em, 1fr)); /* 400px */
+            gap: 1.25em; /* 20px */
+        }
 
-@media (max-width: 768px) {
-    #timeBlocks {
-        grid-template-columns: 1fr; /* Stack items on smaller screens */
-    }
-}
+        @media (max-width: 48em) { /* 768px */
+            #timeBlocks {
+                grid-template-columns: 1fr; /* Stack items on smaller screens */
+            }
+        }
 
-.time-block {
-    border: 1px solid #ccc;
-    padding: 15px;
-    background: #f9f9f9;
-    border-radius: 4px;
-}
         .time-block {
-            border: 1px solid #ccc;
-            padding: 15px;
-            margin-top: 10px;
+            border: 0.06em solid #ccc; /* 1px */
+            padding: 0.94em; /* 15px */
             background: #f9f9f9;
-            border-radius: 4px;
+            border-radius: 0.25em; /* 4px */
+            margin-top: 0.625em; /* 10px */
         }
         .japan-time {
             font-weight: bold;
             color: #333;
-            margin-bottom: 10px;
-            padding-bottom: 5px;
+            margin-bottom: 0.625em; /* 10px */
+            padding-bottom: 0.31em; /* 5px */
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -92,8 +85,8 @@
         .location-item {
             display: flex;
             justify-content: space-between;
-            padding: 5px 0;
-            border-bottom: 1px solid #eee;
+            padding: 0.31em 0; /* 5px 0 */
+            border-bottom: 0.06em solid #eee; /* 1px */
         }
         .location-name {
             font-weight: 500;
@@ -101,100 +94,100 @@
         .region-tag {
             font-size: 0.8em;
             color: #666;
-            margin-left: 8px;
+            margin-left: 0.5em; /* 8px */
         }
         .dst {
             color: #e74c3c;
         }
         .dst-indicator {
-    font-size: 0.8em;
-    color: #e74c3c;
-    margin-left: 8px;
-    display: inline-block;
-}
+            font-size: 0.8em;
+            color: #e74c3c;
+            margin-left: 0.5em; /* 8px */
+            display: inline-block;
+        }
         #currentDate {
             text-align: center;
             font-size: 1.2em;
-            margin: 20px 0;
+            margin: 1.25em 0; /* 20px 0 */
             color: #333;
         }
 
         .location-type-tag {
             font-size: 0.7em;
             color: #666;
-            margin-left: 5px;
+            margin-left: 0.31em; /* 5px */
             text-transform: uppercase;
         }
         .location-type-state { color: #3498db; }
         .location-type-province { color: #2ecc71; }
         .location-type-territory { color: #e74c3c; }
         .utc-offset-group {
-            margin-top: 15px;
-            margin-bottom: 10px;
+            margin-top: 0.94em; /* 15px */
+            margin-bottom: 0.625em; /* 10px */
         }
         .utc-offset-title {
             font-weight: bold;
             font-size: 0.9em;
             color: #333;
-            margin-bottom: 8px;
-            padding: 5px 10px;
+            margin-bottom: 0.5em; /* 8px */
+            padding: 0.31em 0.625em; /* 5px 10px */
             background: #e8f4f8;
-            border-left: 4px solid #007bff;
-            border-radius: 3px;
+            border-left: 0.25em solid #007bff; /* 4px */
+            border-radius: 0.19em; /* 3px */
         }
         .monday-checkbox-container {
             display: flex;
             align-items: center;
-            margin: 10px 0;
+            margin: 0.625em 0; /* 10px 0 */
 
         }
         .monday-checkbox-container label {
-            margin: 0 0 0 5px;
+            margin: 0 0 0 0.31em; /* 0 0 0 5px */
             font-weight: normal;
         }
         #svg-world-map-container { 
             width: 100%; 
-            border: 1px solid #ddd; 
-            border-radius: 8px; 
+            border: 0.06em solid #ddd; /* 1px */
+            border-radius: 0.5em; /* 8px */
             overflow: hidden; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+            box-shadow: 0 0.125em 0.5em rgba(0,0,0,0.1); /* 0 2px 8px */
+            margin-bottom: 1.25em; /* 20px */
         }
-        @media (max-width: 1700px) {
+        @media (max-width: 106.25em) { /* 1700px */
             .container { max-width: 100%; }
         }
-        @media (max-width: 768px) {
-            #svg-world-map { height: 400px; }
+        @media (max-width: 48em) { /* 768px */
+            #svg-world-map { height: 25em; /* 400px */ }
         }
         
         /* Custom slider styling */
         #japanHourSlider::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 20px;
-            height: 20px;
+            width: 1.25em; /* 20px */
+            height: 1.25em; /* 20px */
             border-radius: 50%;
             background: #007bff;
             cursor: pointer;
-            border: 2px solid #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            border: 0.13em solid #fff; /* 2px */
+            box-shadow: 0 0.125em 0.25em rgba(0,0,0,0.2); /* 0 2px 4px */
         }
         
         #japanHourSlider::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
+            width: 1.25em; /* 20px */
+            height: 1.25em; /* 20px */
             border-radius: 50%;
             background: #007bff;
             cursor: pointer;
-            border: 2px solid #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            border: 0.13em solid #fff; /* 2px */
+            box-shadow: 0 0.125em 0.25em rgba(0,0,0,0.2); /* 0 2px 4px */
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Time Zone Buddy</h2>
+    <h2>Global Time Zone Scheduler</h2>
 
     <div style="display: flex; gap: 20px; margin: 20px 0; justify-content: space-between;">
         <div style="flex: 1; min-width: 240px; max-width: 480px; background: #f5f5f5; padding: 15px; border-radius: 8px; overflow: hidden;">
@@ -229,8 +222,6 @@
     </div>
 
     <h3 id="currentDate"></h3>
-    <div id="timeBlocks"></div>
-
     <div class="controls">
         <div class="control-group">
             <h3>Japan Business Hours</h3>
@@ -256,9 +247,9 @@
             <select id="endHourCall"></select>
         </div>
     </div>
-</div>
+    <div id="timeBlocks"></div>
 
-<script>
+    <script>
     let timezoneData = {};
     let pmAssignments = {};
 
@@ -560,7 +551,7 @@
 
             const copyStateProvinceBtn = document.createElement('button');
             copyStateProvinceBtn.className = 'copy-btn copy-state-province';
-            copyStateProvinceBtn.textContent = 'Copy State/Province';
+            copyStateProvinceBtn.textContent = 'Copy States';
 
             const copyCountryBtn = document.createElement('button');
             copyCountryBtn.className = 'copy-btn copy-country';
@@ -1287,3 +1278,4 @@
 
 </body>
 </html>
+
