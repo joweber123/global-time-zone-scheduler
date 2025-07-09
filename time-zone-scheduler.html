@@ -219,16 +219,22 @@
         </div>
     </div>
 
-    <button onclick="updateTimes()">Refresh Times</button>
-
-    <div style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 8px;">
-        <label for="japanHourSlider"><b>Focus on Specific Japan Hour:</b> <span id="japanHourLabel">07:00</span></label><br>
-        <div style="position: relative; margin: 20px 0;">
-            <input type="range" id="japanHourSlider" min="0" max="23" value="7" style="width: 100%; margin: 0; -webkit-appearance: none; height: 6px; border-radius: 3px; background: #ddd; outline: none;">
-            <div id="sliderLabels" style="position: relative; margin-top: 5px; font-size: 0.8em; color: #666; height: 15px;"></div>
+    <div style="display: flex; gap: 20px; margin: 20px 0; justify-content: space-between;">
+        <div style="flex: 1; min-width: 240px; max-width: 480px; background: #f5f5f5; padding: 15px; border-radius: 8px; overflow: hidden;">
+            <label for="locationSearch"><b>Search Location:</b></label><br>
+            <input type="text" id="locationSearch" placeholder="Enter country code, state code, or location name..." style="width: 100%; box-sizing: border-box; padding: 8px; margin: 10px 0 0 0; border: 1px solid #ddd; border-radius: 4px;">
+            <div id="searchResults" style="margin-top: 10px; max-height: 400px; overflow-y: auto;"></div>
         </div>
-        <div style="font-size: 0.9em; color: #666;">
-            Use this slider to see which countries have business hours active at a specific Japan time.
+        <div id="searchDetailsPanel" style="flex: 1; min-width: 240px; max-width: 480px; background: #f5f5f5; padding: 15px; border-radius: 8px; min-height: 120px; display: flex; flex-direction: column; justify-content: flex-start;"></div>
+        <div style="flex: 1; min-width: 240px; max-width: 480px; background: #f5f5f5; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; justify-content: flex-start;">
+            <label for="japanHourSlider"><b>Focus on Specific Japan Hour:</b> <span id="japanHourLabel">07:00</span></label><br>
+            <div style="position: relative; margin: 20px 0;">
+                <input type="range" id="japanHourSlider" min="0" max="23" value="7" style="width: 100%; margin: 0; -webkit-appearance: none; height: 6px; border-radius: 3px; background: #ddd; outline: none;">
+                <div id="sliderLabels" style="position: relative; margin-top: 5px; font-size: 0.8em; color: #666; height: 15px;"></div>
+            </div>
+            <div style="font-size: 0.9em; color: #666;">
+                Use this slider to see which countries have business hours active at a specific Japan time.
+            </div>
         </div>
     </div>
 
@@ -808,6 +814,299 @@
             })}`;
     }
 
+    function searchLocations(query) {
+        const results = [];
+        const currentDate = new Date();
+        
+        if (!query || query.length < 1) {
+            return results;
+        }
+        
+        query = query.toLowerCase();
+        
+        Object.entries(timezoneData).forEach(([tz, data]) => {
+            data.locations.forEach(location => {
+                const matches = [];
+                
+                // For countries with states/provinces (US, CA, AU), only show state/province level
+                // For other countries, show country level
+                const hasSubdivisions = location.state || location.province;
+                const isCountryWithSubdivisions = ['US', 'CA', 'AU'].includes(location.country_code);
+                
+                // Skip country-level entries for countries that have subdivisions
+                if (isCountryWithSubdivisions && !hasSubdivisions) {
+                    return;
+                }
+                
+                // Check country code
+                if (location.country_code && location.country_code.toLowerCase().includes(query)) {
+                    matches.push(`Country Code: ${location.country_code}`);
+                }
+                
+                // Check state code
+                if (location.state_code && location.state_code.toLowerCase().includes(query)) {
+                    matches.push(`State Code: ${location.state_code}`);
+                }
+                
+                // Check province code
+                if (location.province_code && location.province_code.toLowerCase().includes(query)) {
+                    matches.push(`Province Code: ${location.province_code}`);
+                }
+                
+                // Check country name (only for countries without subdivisions)
+                if (location.country && location.country.toLowerCase().includes(query) && !isCountryWithSubdivisions) {
+                    matches.push(`Country: ${location.country}`);
+                }
+                
+                // Check state name
+                if (location.state && location.state.toLowerCase().includes(query)) {
+                    matches.push(`State: ${location.state}`);
+                }
+                
+                // Check province name
+                if (location.province && location.province.toLowerCase().includes(query)) {
+                    matches.push(`Province: ${location.province}`);
+                }
+                
+                if (matches.length > 0) {
+                    const offsetSeconds = getOffsetSeconds(data, currentDate);
+                    const utcOffset = offsetSeconds / 3600;
+                    const offsetLabel = `UTC${utcOffset >= 0 ? '+' : ''}${utcOffset}`;
+                    const pmText = getPMAssignmentText(utcOffset);
+                    
+                    results.push({
+                        location: location,
+                        matches: matches,
+                        utcOffset: offsetLabel,
+                        pmAssignment: pmText || ' - No PM Assignment',
+                        isDST: isDST(data, currentDate),
+                        dstName: data.timezone_data.dst_name,
+                        data: data // Pass the timezone data for offset calculation
+                    });
+                }
+            });
+        });
+        
+        // Remove duplicates based on location
+        const uniqueResults = [];
+        const seen = new Set();
+        
+        results.forEach(result => {
+            const key = `${result.location.country_code}-${result.location.state_code || ''}-${result.location.province_code || ''}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                uniqueResults.push(result);
+            }
+        });
+        
+        return uniqueResults.slice(0, 10); // Limit to 10 results
+    }
+
+    let searchResultsCache = [];
+    let searchSelectedIndex = -1;
+
+    function displaySearchResults(results) {
+        const container = document.getElementById('searchResults');
+        container.innerHTML = '';
+        searchResultsCache = results;
+        searchSelectedIndex = -1;
+        
+        if (results.length === 0) {
+            return;
+        }
+        
+        results.forEach((result, idx) => {
+            const resultItem = document.createElement('div');
+            resultItem.style.cssText = `
+                padding: 8px;
+                margin: 5px 0;
+                background: white;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                border-left: 4px solid #007bff;
+                cursor: pointer;
+            `;
+            resultItem.tabIndex = 0;
+            resultItem.dataset.idx = idx;
+            
+            // Create a more readable location description
+            let locationDescription = '';
+            if (result.location.state) {
+                locationDescription = `(${result.location.country_code}-${result.location.state_code}) ${result.location.country}, ${result.location.state}`;
+            } else if (result.location.province) {
+                locationDescription = `(${result.location.country_code}-${result.location.province_code}) ${result.location.country}, ${result.location.province}`;
+            } else {
+                locationDescription = `(${result.location.country_code}) ${result.location.country}`;
+            }
+            
+            // Add additional codes if they match the search (state/province codes)
+            const additionalCodes = [];
+            if (result.matches.some(m => m.includes('State Code:'))) {
+                additionalCodes.push(`State Code: ${result.location.state_code}`);
+            }
+            if (result.matches.some(m => m.includes('Province Code:'))) {
+                additionalCodes.push(`Province Code: ${result.location.province_code}`);
+            }
+            
+            if (additionalCodes.length > 0) {
+                locationDescription += ` - ${additionalCodes.join(', ')}`;
+            }
+            
+            const locationInfo = document.createElement('div');
+            locationInfo.style.fontWeight = 'bold';
+            locationInfo.textContent = locationDescription;
+            
+            const offsetInfo = document.createElement('div');
+            offsetInfo.style.cssText = 'font-size: 0.9em; color: #333; margin-top: 2px;';
+            offsetInfo.textContent = `${result.utcOffset}${result.pmAssignment}`;
+            
+            if (result.isDST) {
+                const dstInfo = document.createElement('div');
+                dstInfo.style.cssText = 'font-size: 0.8em; color: #e74c3c; margin-top: 2px;';
+                dstInfo.textContent = `DST Active (${result.dstName})`;
+                resultItem.appendChild(dstInfo);
+            }
+            
+            resultItem.appendChild(locationInfo);
+            resultItem.appendChild(offsetInfo);
+            
+            // Add click handler to show details in the right panel and clear results
+            resultItem.addEventListener('click', function() {
+                showSearchDetails(result);
+                setSearchSelected(idx);
+                document.getElementById('searchResults').innerHTML = '';
+            });
+            
+            container.appendChild(resultItem);
+        });
+    }
+
+    function setSearchSelected(idx) {
+        const container = document.getElementById('searchResults');
+        const items = Array.from(container.children);
+        items.forEach((item, i) => {
+            if (i === idx) {
+                item.style.background = '#e8f4f8';
+                item.style.outline = '2px solid #007bff';
+                item.scrollIntoView({ block: 'nearest' });
+            } else {
+                item.style.background = 'white';
+                item.style.outline = 'none';
+            }
+        });
+        searchSelectedIndex = idx;
+    }
+
+    function showSearchDetails(result) {
+        const panel = document.getElementById('searchDetailsPanel');
+        panel.innerHTML = '';
+        
+        // Location title
+        let locationDescription = '';
+        if (result.location.state) {
+            locationDescription = `(${result.location.country_code}-${result.location.state_code}) ${result.location.country}, ${result.location.state}`;
+        } else if (result.location.province) {
+            locationDescription = `(${result.location.country_code}-${result.location.province_code}) ${result.location.country}, ${result.location.province}`;
+        } else {
+            locationDescription = `(${result.location.country_code}) ${result.location.country}`;
+        }
+        const title = document.createElement('div');
+        title.style.fontWeight = 'bold';
+        title.style.fontSize = '1.1em';
+        title.style.marginBottom = '8px';
+        title.textContent = locationDescription;
+        panel.appendChild(title);
+        
+        // Offset and PM assignment
+        const offsetInfo = document.createElement('div');
+        offsetInfo.style.cssText = 'font-size: 1em; color: #333; margin-bottom: 8px;';
+        offsetInfo.textContent = `${result.utcOffset}${result.pmAssignment}`;
+        panel.appendChild(offsetInfo);
+        
+        // DST info
+        if (result.isDST) {
+            const dstInfo = document.createElement('div');
+            dstInfo.style.cssText = 'font-size: 0.9em; color: #e74c3c; margin-bottom: 8px;';
+            dstInfo.textContent = `DST Active (${result.dstName})`;
+            panel.appendChild(dstInfo);
+        }
+        
+        // Calculate Japan time ranges for calling
+        const japanOffsetSeconds = 32400; // JST is UTC+9
+        const currentDate = new Date();
+        const offsetSeconds = getOffsetSeconds(result.data || {}, currentDate);
+        const localToJapanOffset = (japanOffsetSeconds - offsetSeconds) / 3600;
+        
+        // Get local business hours from dropdowns
+        const startHourCall = parseInt(document.getElementById('startHourCall').value);
+        const endHourCall = parseInt(document.getElementById('endHourCall').value);
+        
+        // Calculate Japan time range(s)
+        let japanStart = (startHourCall + localToJapanOffset + 24) % 24;
+        let japanEnd = (endHourCall + localToJapanOffset + 24) % 24;
+        
+        // Format as 00:00
+        function formatHour(h) {
+            return h.toString().padStart(2, '0') + ':00';
+        }
+        
+        let timeRangeText = '';
+        if (japanStart < japanEnd) {
+            timeRangeText = `${formatHour(Math.floor(japanStart))} - ${formatHour(Math.floor(japanEnd))} JST`;
+        } else if (japanStart > japanEnd) {
+            // Overnight range
+            timeRangeText = `${formatHour(Math.floor(japanStart))} - 23:59 JST and 00:00 - ${formatHour(Math.floor(japanEnd))} JST`;
+        } else {
+            timeRangeText = 'No available time range (start and end are the same)';
+        }
+        
+        const timeRangeDiv = document.createElement('div');
+        timeRangeDiv.style.cssText = 'font-size: 1.1em; color: #007bff; margin-top: 10px;';
+        timeRangeDiv.textContent = `Japan time to call: ${timeRangeText}`;
+        panel.appendChild(timeRangeDiv);
+
+        // --- Add hour-by-hour list ---
+        // Build a list of all Japan hours in the call window, with corresponding local times
+        let hourPairs = [];
+        if (japanStart < japanEnd) {
+            for (let h = Math.floor(japanStart); h < Math.floor(japanEnd); h++) {
+                let japanHour = (h + 24) % 24;
+                let localHour = (japanHour - localToJapanOffset + 24) % 24;
+                hourPairs.push({ japan: japanHour, local: localHour });
+            }
+        } else if (japanStart > japanEnd) {
+            // Overnight: from japanStart to 23, then 0 to japanEnd-1
+            for (let h = Math.floor(japanStart); h < 24; h++) {
+                let japanHour = (h + 24) % 24;
+                let localHour = (japanHour - localToJapanOffset + 24) % 24;
+                hourPairs.push({ japan: japanHour, local: localHour });
+            }
+            for (let h = 0; h < Math.floor(japanEnd); h++) {
+                let japanHour = (h + 24) % 24;
+                let localHour = (japanHour - localToJapanOffset + 24) % 24;
+                hourPairs.push({ japan: japanHour, local: localHour });
+            }
+        }
+        // Only show the list if there are hours
+        if (hourPairs.length > 0) {
+            const table = document.createElement('table');
+            table.style.cssText = 'width: 100%; margin-top: 12px; border-collapse: collapse;';
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            headerRow.innerHTML = '<th style="text-align:left; padding: 4px 8px;">Japan Time</th><th style="text-align:left; padding: 4px 8px;">Local Time</th>';
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+            const tbody = document.createElement('tbody');
+            hourPairs.forEach(pair => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td style="padding: 4px 8px;">${formatHour(pair.japan)}</td><td style="padding: 4px 8px;">${formatHour(pair.local)}</td>`;
+                tbody.appendChild(row);
+            });
+            table.appendChild(tbody);
+            panel.appendChild(table);
+        }
+    }
+
     // Generate slider time labels
     function generateSliderLabels() {
         const labelsContainer = document.getElementById('sliderLabels');
@@ -834,9 +1133,42 @@
     document.addEventListener('DOMContentLoaded', function() {
         const slider = document.getElementById('japanHourSlider');
         const label = document.getElementById('japanHourLabel');
+        const searchInput = document.getElementById('locationSearch');
         
         // Generate time labels for slider
         generateSliderLabels();
+        
+        // Search functionality
+        searchInput.addEventListener('input', function() {
+            const query = searchInput.value.trim();
+            const results = searchLocations(query);
+            displaySearchResults(results);
+        });
+        
+        // Keyboard navigation for search results
+        searchInput.addEventListener('keydown', function(e) {
+            if (!searchResultsCache.length) return;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (searchSelectedIndex < searchResultsCache.length - 1) {
+                    setSearchSelected(searchSelectedIndex + 1);
+                } else {
+                    setSearchSelected(0);
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (searchSelectedIndex > 0) {
+                    setSearchSelected(searchSelectedIndex - 1);
+                } else {
+                    setSearchSelected(searchResultsCache.length - 1);
+                }
+            } else if (e.key === 'Enter') {
+                if (searchSelectedIndex >= 0 && searchSelectedIndex < searchResultsCache.length) {
+                    showSearchDetails(searchResultsCache[searchSelectedIndex]);
+                    document.getElementById('searchResults').innerHTML = '';
+                }
+            }
+        });
         
         slider.addEventListener('input', function() {
             const currentHour = parseInt(slider.value, 10);
@@ -858,6 +1190,16 @@
             updateTimes();
             const currentHour = parseInt(slider.value, 10);
             updateMapForSpecificHour(currentHour);
+        });
+
+        // Add change listeners to the dropdowns to auto-refresh times
+        ['startHourJP', 'endHourJP', 'startHourCall', 'endHourCall'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('change', function() {
+                    updateTimes();
+                });
+            }
         });
     });
 
